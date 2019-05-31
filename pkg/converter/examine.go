@@ -1,4 +1,4 @@
-package main
+package converter
 
 func checkForMapExt(diff *OldDifficultyJSON) bool {
 	for _, note := range diff.Notes {

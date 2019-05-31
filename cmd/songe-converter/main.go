@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/lolPants/songe-converter/pkg/converter"
+
 	"github.com/bmatcuk/doublestar"
 	"github.com/ttacon/chalk"
 )
@@ -111,10 +113,10 @@ func main() {
 		dirs = args
 	}
 
-	flags := CommandFlags{keepFiles, dryRun, quiet}
-	c := make(chan Result, len(dirs))
+	flags := converter.CommandFlags{keepFiles, dryRun, quiet}
+	c := make(chan converter.Result, len(dirs))
 
-	if flags.dryRun && !flags.quiet {
+	if flags.DryRun && !flags.Quiet {
 		printWarning("Performing a dry run!")
 	}
 
@@ -123,7 +125,7 @@ func main() {
 		sem <- true
 		go func(dir string) {
 			defer func() { <-sem }()
-			run(dir, flags, c)
+			converter.Run(dir, flags, c)
 		}(dir)
 	}
 
@@ -131,7 +133,7 @@ func main() {
 		sem <- true
 	}
 
-	results := make([]Result, 0)
+	results := make([]converter.Result, 0)
 	for i := 0; i < len(dirs); i++ {
 		result := <-c
 		results = append(results, result)
@@ -148,44 +150,28 @@ func main() {
 
 		f.WriteString("HASHES:\n")
 		for _, result := range results {
-			if result.err != nil {
+			if result.Err != nil {
 				continue
 			}
 
-			f.WriteString(result.oldHash)
+			f.WriteString(result.OldHash)
 			f.WriteString("\t")
-			f.WriteString(result.newHash)
+			f.WriteString(result.NewHash)
 			f.WriteString("\t")
-			f.WriteString(result.dir)
+			f.WriteString(result.Dir)
 			f.WriteString("\n")
 		}
 
 		f.WriteString("\nERRORS:\n")
 		for _, result := range results {
-			if result.err == nil {
+			if result.Err == nil {
 				continue
 			}
 
-			f.WriteString(result.err.Error())
+			f.WriteString(result.Err.Error())
 			f.WriteString("\t")
-			f.WriteString(result.dir)
+			f.WriteString(result.Dir)
 			f.WriteString("\n")
 		}
 	}
-}
-
-// CommandFlags Command Flags
-type CommandFlags struct {
-	keepFiles bool
-	dryRun    bool
-	quiet     bool
-}
-
-// Result Converted Hashes
-type Result struct {
-	dir string
-
-	oldHash string
-	newHash string
-	err     error
 }

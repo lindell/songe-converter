@@ -1,4 +1,4 @@
-package main
+package converter
 
 // NewInfoJSON New Info JSON
 type NewInfoJSON struct {

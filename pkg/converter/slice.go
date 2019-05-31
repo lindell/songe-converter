@@ -1,4 +1,4 @@
-package main
+package converter
 
 func stringInSlice(a string, list []string) bool {
 	for _, b := range list {

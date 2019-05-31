@@ -1,4 +1,4 @@
-package main
+package converter
 
 import (
 	"crypto/md5"

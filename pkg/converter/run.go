@@ -1,4 +1,4 @@
-package main
+package converter
 
 import (
 	"errors"
@@ -10,15 +10,31 @@ import (
 	"strings"
 )
 
+// CommandFlags Command Flags
+type CommandFlags struct {
+	KeepFiles bool
+	DryRun    bool
+	Quiet     bool
+}
+
+// Result Converted Hashes
+type Result struct {
+	Dir string
+
+	OldHash string
+	NewHash string
+	Err     error
+}
+
 func makeLogger(flags CommandFlags) func(v interface{}) {
 	return func(v interface{}) {
-		if flags.quiet == false {
+		if flags.Quiet == false {
 			log.Print(v)
 		}
 	}
 }
 
-func run(dir string, flags CommandFlags, c chan Result) {
+func Run(dir string, flags CommandFlags, c chan Result) {
 	logger := makeLogger(flags)
 	base := filepath.Base(dir)
 	if base == "info.json" {
@@ -30,14 +46,14 @@ func run(dir string, flags CommandFlags, c chan Result) {
 	if infoErr != nil && os.IsNotExist(infoErr) {
 		logger("No info.json found in \"" + dir + "\", skipping!")
 
-		result := Result{dir: dir, oldHash: "", newHash: "", err: errors.New("info.json not found")}
+		result := Result{Dir: dir, OldHash: "", NewHash: "", Err: errors.New("info.json not found")}
 		c <- result
 		return
 	} else if infoErr != nil {
 		logger("Something went wrong when converting \"" + dir + "\"")
 		logger(infoErr)
 
-		result := Result{dir: dir, oldHash: "", newHash: "", err: infoErr}
+		result := Result{Dir: dir, OldHash: "", NewHash: "", Err: infoErr}
 		c <- result
 	} else {
 		logger("Converting \"" + dir + "\"")
@@ -81,14 +97,14 @@ func run(dir string, flags CommandFlags, c chan Result) {
 		if diffErr != nil && os.IsNotExist(diffErr) {
 			logger(diff.JSONPath + " not found in \"" + dir + "\", skipping!")
 
-			result := Result{dir: dir, oldHash: "", newHash: "", err: errors.New(diff.JSONPath + " not found")}
+			result := Result{Dir: dir, OldHash: "", NewHash: "", Err: errors.New(diff.JSONPath + " not found")}
 			c <- result
 			return
 		} else if diffErr != nil {
 			logger("Something went wrong when reading \"" + json + "\"")
 			logger(diffErr)
 
-			result := Result{dir: dir, oldHash: "", newHash: "", err: diffErr}
+			result := Result{Dir: dir, OldHash: "", NewHash: "", Err: diffErr}
 			c <- result
 		}
 
@@ -210,7 +226,7 @@ func run(dir string, flags CommandFlags, c chan Result) {
 		newInfoJSON.DifficultyBeatmapSets[beatmapSetIdx] = beatmapSet
 
 		diffJSONPath := filepath.Join(dir, diffJSONFileName)
-		if flags.dryRun == false {
+		if flags.DryRun == false {
 			_ = ioutil.WriteFile(diffJSONPath, diffJSONBytes, 0644)
 		}
 	}
@@ -232,7 +248,7 @@ func run(dir string, flags CommandFlags, c chan Result) {
 	}
 
 	infoJSONPath := filepath.Join(dir, "info.dat")
-	if flags.dryRun == false {
+	if flags.DryRun == false {
 		_ = ioutil.WriteFile(infoJSONPath, infoJSONBytes, 0644)
 	}
 
@@ -241,11 +257,11 @@ func run(dir string, flags CommandFlags, c chan Result) {
 		logger("Something went wrong when converting \"" + dir + "\"")
 		logger(err)
 
-		result := Result{dir: dir, oldHash: "", newHash: "", err: err}
+		result := Result{Dir: dir, OldHash: "", NewHash: "", Err: err}
 		c <- result
 	}
 
-	if flags.keepFiles == false && flags.dryRun == false {
+	if flags.KeepFiles == false && flags.DryRun == false {
 		err := os.Remove(info)
 		if err != nil {
 			logger("Failed to delete \"" + info + "\"")
@@ -260,6 +276,6 @@ func run(dir string, flags CommandFlags, c chan Result) {
 	}
 
 	newHash := calculateHashSHA1(allBytes)
-	result := Result{dir: dir, oldHash: oldHash, newHash: newHash, err: nil}
+	result := Result{Dir: dir, OldHash: oldHash, NewHash: newHash, Err: nil}
 	c <- result
 }
